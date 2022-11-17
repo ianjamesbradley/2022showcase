@@ -1,11 +1,11 @@
 
 
-
 #include "SplineConnectorGeneration.h"
-
+#include "EngineUtils.h"
 #include <stdbool.h>
 #include "Engine/World.h"
 #include "Components/SplineComponent.h"
+#include "Factories/TextureFactory.h"
 
 // Sets default values
 ASplineConnectorGeneration::ASplineConnectorGeneration()
@@ -70,7 +70,8 @@ void ASplineConnectorGeneration::OnConstruction(const FTransform& Transform)
 			SpawnPoint.X = FMath::FRandRange((SpawnPoint.X-200), (SpawnPoint.X+200));
 			SpawnPoint.Y = FMath::FRandRange((SpawnPoint.Y-200), (SpawnPoint.Y+200));
 			SpawnPoint.Z = FMath::FRandRange((SpawnPoint.Z-400), (SpawnPoint.Z+400));
-			GetWorld()->SpawnActor<AActor>(BlockToSpawn, SpawnPoint, FRotator(0,0,0),FActorSpawnParameters());
+			AActor*NewBlock = GetWorld()->SpawnActor<AActor>(BlockToSpawn, SpawnPoint, FRotator(0,0,0),FActorSpawnParameters());
+			BlocksSpawned.AddUnique(NewBlock);
 		}
 		HaveSpawned = true;
 	}	
@@ -93,9 +94,11 @@ void ASplineConnectorGeneration::Tick(float DeltaTime)
 	SplineComponent->UpdateSpline();
 
 }
-
-
-
-
-
-
+//used to destroy blocks if needed.
+void ASplineConnectorGeneration::RemoveBlocks()
+{
+	for (auto Spawned : BlocksSpawned)
+	{
+		Spawned->Destroy();
+	}
+}
