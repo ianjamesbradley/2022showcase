@@ -1,11 +1,10 @@
-
-
 #include "SplineConnectorGeneration.h"
 #include "EngineUtils.h"
 #include <stdbool.h>
 #include "Engine/World.h"
 #include "Components/SplineComponent.h"
 #include "Factories/TextureFactory.h"
+#include "GameFramework/Actor.h"
 
 // Sets default values
 ASplineConnectorGeneration::ASplineConnectorGeneration()
@@ -21,7 +20,6 @@ ASplineConnectorGeneration::ASplineConnectorGeneration()
 	}
 	
 }
-bool HaveSpawned = false;
 float FullLength;
 
 void ASplineConnectorGeneration::OnConstruction(const FTransform& Transform)
@@ -36,6 +34,7 @@ void ASplineConnectorGeneration::OnConstruction(const FTransform& Transform)
 	{
 		return;
 	}
+	
 	//taking this out will not break anything, it will allow you to make your spline before the blocks are spawned. could be a feature
 	if(!BlockToSpawn)
 	{
@@ -70,7 +69,7 @@ void ASplineConnectorGeneration::OnConstruction(const FTransform& Transform)
 			SpawnPoint.X = FMath::FRandRange((SpawnPoint.X-200), (SpawnPoint.X+200));
 			SpawnPoint.Y = FMath::FRandRange((SpawnPoint.Y-200), (SpawnPoint.Y+200));
 			SpawnPoint.Z = FMath::FRandRange((SpawnPoint.Z-400), (SpawnPoint.Z+400));
-			AActor*NewBlock = GetWorld()->SpawnActor<AActor>(BlockToSpawn, SpawnPoint, FRotator(0,0,0),FActorSpawnParameters());
+			auto NewBlock = GetWorld()->SpawnActor<AActor>(BlockToSpawn, SpawnPoint, FRotator(0,0,0),FActorSpawnParameters());
 			BlocksSpawned.AddUnique(NewBlock);
 		}
 		HaveSpawned = true;
@@ -94,11 +93,37 @@ void ASplineConnectorGeneration::Tick(float DeltaTime)
 	SplineComponent->UpdateSpline();
 
 }
-//used to destroy blocks if needed.
+//used to destroy blocks if needed. will reset bool
 void ASplineConnectorGeneration::RemoveBlocks()
 {
 	for (auto Spawned : BlocksSpawned)
 	{
 		Spawned->Destroy();
 	}
+	BlocksSpawned.Empty();
+	HaveSpawned = false;
+}
+
+//allows users reset a population if they want a different layout.
+void ASplineConnectorGeneration::ResetAndRepopulate()
+{
+	RemoveBlocks();
+
+	//gets world locations for start and end points. All the Info needed to spawn blocks again.
+	const FVector StartPoint = StartFloor->GetActorLocation();
+	const FVector EndPoint = EndFloor->GetActorLocation();
+	float SplineDistance = FVector(EndPoint-StartPoint).Size();
+	const int SPointAmount  = SplineDistance/600; 
+
+	for (int SpawnedPoints =0 ; SpawnedPoints != SPointAmount -1 ; SpawnedPoints++)
+	{
+		FVector SpawnPoint = SplineComponent->GetLocationAtSplinePoint(SpawnedPoints + 1 ,ESplineCoordinateSpace::World);
+		SpawnPoint.X = FMath::FRandRange((SpawnPoint.X-200), (SpawnPoint.X+200));
+		SpawnPoint.Y = FMath::FRandRange((SpawnPoint.Y-200), (SpawnPoint.Y+200));
+		SpawnPoint.Z = FMath::FRandRange((SpawnPoint.Z-400), (SpawnPoint.Z+400));
+		auto NewBlock = GetWorld()->SpawnActor<AActor>(BlockToSpawn, SpawnPoint, FRotator(0,0,0),FActorSpawnParameters());
+		BlocksSpawned.AddUnique(NewBlock);
+	}
+	HaveSpawned = true;
+	
 }
